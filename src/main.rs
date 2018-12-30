@@ -8,6 +8,9 @@ use std::process;
 
 mod heap_dump;
 mod sys_check;
+mod object_space_2_6_0;
+pub mod deserialize_utils;
+pub mod heap_address;
 
 fn main() {
     let args: Vec<_> = env::args().collect();
@@ -18,14 +21,14 @@ fn main() {
         process::exit(1);
     }
     let filename = first_arg.unwrap();
-    let mut file = File::open(filename);
+    let file = File::open(filename);
 
     if file.is_err() {
         println!("File '{}' read failure ({:?})", filename, file);
         process::exit(1);
     }
 
-    let mut hd = heap_dump::HeapDump::load_file(file.unwrap());
+    let hd = heap_dump::HeapDump::load_file(file.unwrap());
     hd.print_roots();
 
     let fsize = sys_check::FileCheck::size_kb(filename);

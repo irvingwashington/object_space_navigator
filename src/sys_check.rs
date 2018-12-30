@@ -36,7 +36,7 @@ impl FileCheck {
 
     match metadata {
       Ok(mtd) => (mtd.len() / 1024) as usize,
-      Err(e) => 0 as usize
+      Err(_) => 0 as usize
     }
   }
 }

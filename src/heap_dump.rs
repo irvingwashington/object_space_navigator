@@ -4,10 +4,17 @@ use std::collections::HashMap;
 use std::fs::File;
 use std::io::prelude::*;
 use std::io::BufReader;
+use super::heap_address::HeapAddress;
 
-type HeapAddress = u64;
+#[derive(Debug)]
+enum AnyHeapObject {
+    StringObject(StringObject),
+    ArrayObject(ArrayObject),
+    HeapObject(HeapObject),
+    RootObject(RootObject)
+}
 
-type HeapObjectFlags = Vec<String>;
+// type HeapAddress = u64;
 
 struct ConversionUtils {}
 impl ConversionUtils {
@@ -136,25 +143,34 @@ impl HeapObject {
 }
 
 #[derive(Hash, Eq, PartialEq, Debug, Deserialize)]
+struct Flags {
+    wb_protected: Option<bool>,
+    old: Option<bool>,
+    uncollectible: Option<bool>,
+    marked: Option<bool>
+}
+
+#[derive(Hash, Eq, PartialEq, Debug, Deserialize)]
 struct StringObject {
     #[serde(deserialize_with = "ConversionUtils::from_hex")]
     address: HeapAddress,
     #[serde(deserialize_with = "ConversionUtils::from_hex")]
+    #[serde(default)]
     class: HeapAddress,
-    #[serde(default)]
-    frozen: bool,
-    #[serde(default)]
-    fstring: bool,
-    bytesize: usize,
-    #[serde(default)]
-    capacity: usize,
-    value: String,
-    encoding: String,
+    frozen: Option<bool>,
+    fstring: Option<bool>,
+    bytesize: Option<usize>,
+    capacity: Option<usize>,
+    value: Option<String>,
+    encoding: Option<String>,
     memsize: usize,
     #[serde(default)]
     #[serde(deserialize_with = "ConversionUtils::from_hex_array")]
     references: Vec<HeapAddress>,
-    // flags: HashMap<String, bool>
+    flags: Flags,
+    file: Option<String>,
+    generation: Option<usize>,
+    line: Option<usize>
 }
 
 impl StringObject {
@@ -163,15 +179,36 @@ impl StringObject {
     }
 }
 
+#[derive(Hash, Eq, PartialEq, Debug, Deserialize)]
+struct ArrayObject {
+    #[serde(deserialize_with = "ConversionUtils::from_hex")]
+    address: HeapAddress,
+    #[serde(deserialize_with = "ConversionUtils::from_hex")]
+    #[serde(default)]
+    class: HeapAddress,
+    length: usize,
+    memsize: usize,
+    flags: Option<Flags>,
+    #[serde(default)]
+    #[serde(deserialize_with = "ConversionUtils::from_hex_array")]
+    references: Vec<HeapAddress>,
+}
+
+impl ArrayObject {
+    fn from_str(json_form: &str) -> Result<Self, Error> {
+        serde_json::from_str(json_form)
+    }
+}
+
 pub struct HeapDump {
     root_objects: HashMap<String, RootObject>,
-    objects: HashMap<HeapAddress, HeapObject>,
+    objects: HashMap<HeapAddress, AnyHeapObject>,
 }
 
 impl HeapDump {
     pub fn load_file(file: File) -> Self {
         let mut heap_dump = HeapDump { objects: HashMap::new(), root_objects: HashMap::new() };
-        let mut buf_reader = BufReader::new(file);
+        let buf_reader = BufReader::new(file);
 
         for line in buf_reader.lines() { heap_dump.add_line(line.unwrap()); }
 
@@ -194,13 +231,22 @@ impl HeapDump {
             let string_object_result = StringObject::from_str(&line);
             if string_object_result.is_err() {
                 println!("String object err {:?}", string_object_result);
-                return;
             } else {
-                println!("String object decoded {:?}", string_object_result);
-                return;
+                let string_object = string_object_result.unwrap();
+                self.objects.insert(string_object.address, AnyHeapObject::StringObject(string_object));
             }
+            return
         }
-
+        if line.contains("\"type\":\"ARRAY\"") {
+            let array_object_result = ArrayObject::from_str(&line);
+            if array_object_result.is_err() {
+                println!("Array object err {:?}", array_object_result);
+            } else {
+                let array_object = array_object_result.unwrap();
+                self.objects.insert(array_object.address, AnyHeapObject::ArrayObject(array_object));
+            }
+            return
+        }
         let parse_result: Result<Value, Error> = serde_json::from_str(&line);
 
         if parse_result.is_err() {
@@ -212,23 +258,12 @@ impl HeapDump {
     }
 
     pub fn add_value(&mut self, value: Value) {
-        let value_type = value["type"].as_str();
-        match value_type {
-            Some("ROOT") => {
-                let root_object = RootObject::from_value(value);
-                self.root_objects
-                    .insert(root_object.root.clone(), root_object);
-            }
-            Some(_) => {
-                let heap_object_option = HeapObject::from_value(value);
-                if heap_object_option.is_none() {
-                    return;
-                }
-                let heap_object = heap_object_option.unwrap();
-                self.objects.insert(heap_object.address, heap_object);
-            }
-            None => {}
+        let heap_object_option = HeapObject::from_value(value);
+        if heap_object_option.is_none() {
+            return;
         }
+        let heap_object = heap_object_option.unwrap();
+        self.objects.insert(heap_object.address, AnyHeapObject::HeapObject(heap_object));
     }
 
     pub fn print_roots(&self) {
