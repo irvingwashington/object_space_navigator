@@ -3,6 +3,7 @@ use crate::heap_address::HeapAddress;
 use crate::deserialize_utils::DeserializeUtils;
 use super::flags::Flags;
 
+// Wrapped C pointers
 #[derive(Hash, Eq, PartialEq, Debug, Deserialize)]
 struct NodeData {
     #[serde(deserialize_with = "DeserializeUtils::from_hex")]

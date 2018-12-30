@@ -3,6 +3,7 @@ use crate::heap_address::HeapAddress;
 use crate::deserialize_utils::DeserializeUtils;
 use super::flags::Flags;
 
+// Mixed-in module holder
 #[derive(Hash, Eq, PartialEq, Debug, Deserialize)]
 struct NodeIclass {
     #[serde(deserialize_with = "DeserializeUtils::from_hex")]

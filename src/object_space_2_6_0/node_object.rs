@@ -10,8 +10,7 @@ struct NodeObject {
     #[serde(deserialize_with = "DeserializeUtils::from_hex")]
     class: HeapAddress,
     ivars: usize,
-    #[serde(default)]
-    #[serde(deserialize_with = "DeserializeUtils::from_hex_array")]
+    #[serde(default, deserialize_with = "DeserializeUtils::from_hex_array")]
     references: Vec<HeapAddress>,
     memsize: usize,
     pub flags: Flags,

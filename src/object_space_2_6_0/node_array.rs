@@ -7,14 +7,12 @@ use super::flags::Flags;
 struct NodeArray {
     #[serde(deserialize_with = "DeserializeUtils::from_hex")]
     address: HeapAddress,
-    #[serde(default)]
-    #[serde(deserialize_with = "DeserializeUtils::from_hex_opt")]
+    #[serde(default, deserialize_with = "DeserializeUtils::from_hex_opt")]
     class: Option<HeapAddress>,
     frozen: Option<bool>,
     length: usize,
     embedded: Option<bool>,
-    #[serde(default)]
-    #[serde(deserialize_with = "DeserializeUtils::from_hex_array")]
+    #[serde(default, deserialize_with = "DeserializeUtils::from_hex_array")]
     references: Vec<HeapAddress>,
     memsize: usize,
     pub flags: Option<Flags>,

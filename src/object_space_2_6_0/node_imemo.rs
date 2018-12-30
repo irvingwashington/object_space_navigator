@@ -7,12 +7,10 @@ use super::flags::Flags;
 struct NodeImemo {
     #[serde(deserialize_with = "DeserializeUtils::from_hex")]
     address: HeapAddress,
-    #[serde(deserialize_with = "DeserializeUtils::from_hex_opt")]
-    #[serde(default)]
+    #[serde(default, deserialize_with = "DeserializeUtils::from_hex_opt")]
     class: Option<HeapAddress>,
     imemo_type: String, // TODO: enum
-    #[serde(default)]
-    #[serde(deserialize_with = "DeserializeUtils::from_hex_array")]
+    #[serde(default, deserialize_with = "DeserializeUtils::from_hex_array")]
     references: Vec<HeapAddress>,
     memsize: usize,
     pub flags: Flags,

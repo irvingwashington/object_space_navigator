@@ -19,8 +19,7 @@ pub struct NodeString {
     pub flags: Flags,
     capacity: Option<usize>,
     shared: Option<bool>,
-    #[serde(default)]
-    #[serde(deserialize_with = "DeserializeUtils::from_hex_array")]
+    #[serde(default, deserialize_with = "DeserializeUtils::from_hex_array")]
     references: Vec<HeapAddress>,
     file: Option<String>,
     line: Option<usize>,
